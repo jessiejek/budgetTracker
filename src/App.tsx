@@ -1298,8 +1298,10 @@ export default function App() {
           <List size={20} />
           <span>History</span>
         </NavLink>
-        <NavLink to="/add" className="add-tab">
-          <Plus size={23} />
+        <NavLink to="/add" className="add-tab" end>
+          <span className="add-action" aria-hidden="true">
+            <Plus size={23} />
+          </span>
           <span>Add</span>
         </NavLink>
         <NavLink to="/budgets">
