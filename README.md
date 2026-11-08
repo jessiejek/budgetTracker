@@ -1,6 +1,6 @@
-# Saldo · budgetTracker
+# Budget Tracker
 
-A mobile-first, PHP expense tracker. React 19 + Vite + TypeScript + Tailwind v4, Supabase, IndexedDB (`idb`), React Router and Recharts. Clean forest-green / paper design, installable PWA, no gradients or emoji icons.
+A responsive PHP expense tracker for phones, tablets and desktops. React 19 + Vite + TypeScript + Tailwind v4, Supabase, IndexedDB (`idb`), React Router and Recharts. Clean forest-green / paper design, installable PWA, no gradients or emoji icons.
 
 ## 1. Run locally
 
@@ -66,7 +66,8 @@ Use a fresh project and run the migration once. It is transactional, creates `pr
 - Budgets: per-category / per-month limits and remaining amounts.
 - Categories: create, rename, recolor, archive and restore your own copies. Type is fixed after creation to preserve history.
 - Settings: create wallets with opening balances, export CSV, manual sync and sign out.
-- Accessible bottom navigation, focus states, loading, empty and error states.
+- Responsive layouts: bottom tabs on phones/tablets, sidebar navigation above 1024px, multi-column dashboards and centered forms.
+- Accessible navigation, focus states, loading, empty and error states.
 
 ## Offline and privacy
 

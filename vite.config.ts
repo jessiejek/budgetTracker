@@ -19,8 +19,8 @@ export default defineConfig({
       registerType: "prompt",
       includeAssets: ["icon.svg", "icons/*.png"],
       manifest: {
-        name: "Saldo · Budget Tracker",
-        short_name: "Saldo",
+        name: "Budget Tracker",
+        short_name: "Budget Tracker",
         description: "Know where your pesos go.",
         theme_color: "#173f38",
         background_color: "#f7f8f2",

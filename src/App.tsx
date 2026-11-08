@@ -173,48 +173,64 @@ function Overview({
         <h2>{monthName(month)}</h2>
         <MonthPicker month={month} setMonth={setMonth} />
       </div>
-      <section className="spending-card" aria-label="Monthly spending">
-        <span>Spent this month</span>
-        <div className="spending-ring">
-          <svg viewBox="0 0 220 220" aria-hidden="true">
-            <circle
-              cx="110"
-              cy="110"
-              r="100"
-              fill="none"
-              stroke="#70877c"
-              strokeWidth="8"
-            />
-            <circle
-              cx="110"
-              cy="110"
-              r="100"
-              fill="none"
-              stroke="#d0e48f"
-              strokeWidth="8"
-              strokeDasharray="628.32"
-              strokeDashoffset={628.32 * (1 - ratio)}
-              transform="rotate(-90 110 110)"
-            />
-          </svg>
-          <div>
-            <strong>{money(spent)}</strong>
-            <span>
-              {budget ? `of ${money(budget)} budget` : "Your monthly expenses"}
-            </span>
+      <div className="summary-grid">
+        <section className="spending-card" aria-label="Monthly spending">
+          <span>Spent this month</span>
+          <div className="spending-ring">
+            <svg viewBox="0 0 220 220" aria-hidden="true">
+              <circle
+                cx="110"
+                cy="110"
+                r="100"
+                fill="none"
+                stroke="#70877c"
+                strokeWidth="8"
+              />
+              <circle
+                cx="110"
+                cy="110"
+                r="100"
+                fill="none"
+                stroke="#d0e48f"
+                strokeWidth="8"
+                strokeDasharray="628.32"
+                strokeDashoffset={628.32 * (1 - ratio)}
+                transform="rotate(-90 110 110)"
+              />
+            </svg>
+            <div>
+              <strong>{money(spent)}</strong>
+              <span>
+                {budget
+                  ? `of ${money(budget)} budget`
+                  : "Your monthly expenses"}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="card-bottom">
-          <span>
-            {budget
-              ? spent > budget
-                ? "Over budget"
-                : "Room for this month"
-              : "Income this month"}
-          </span>
-          <strong>{money(budget ? Math.abs(budget - spent) : income)}</strong>
-        </div>
-      </section>
+          <div className="card-bottom">
+            <span>
+              {budget
+                ? spent > budget
+                  ? "Over budget"
+                  : "Room for this month"
+                : "Income this month"}
+            </span>
+            <strong>{money(budget ? Math.abs(budget - spent) : income)}</strong>
+          </div>
+        </section>
+        <section className="panel summary-card">
+          <ArrowDownLeft aria-hidden="true" />
+          <span>Income this month</span>
+          <strong>{money(income)}</strong>
+          <p>Money coming in</p>
+        </section>
+        <section className="panel summary-card">
+          <WalletIcon aria-hidden="true" />
+          <span>Net this month</span>
+          <strong>{money(income - spent)}</strong>
+          <p>Income minus expenses</p>
+        </section>
+      </div>
       <div className="section-heading">
         <h2>Your wallets</h2>
         <Link to="/settings">
@@ -240,38 +256,48 @@ function Overview({
           </div>
         ))}
       </div>
-      {chart.length > 0 && (
+      <div className="dashboard-details">
         <section className="panel category-chart">
-          <h2>Where it went</h2>
-          <Suspense
-            fallback={
-              <div className="chart-placeholder" role="status">
-                Loading chart…
-              </div>
-            }
-          >
-            <SpendingChart data={chart} />
-          </Suspense>
-          <ul className="legend">
-            {chart.map((c) => (
-              <li key={c.name}>
-                <span>
-                  <i style={{ background: c.color }} />
-                  {c.name}
-                </span>
-                <strong>{money(c.value)}</strong>
-              </li>
-            ))}
-          </ul>
+          {chart.length > 0 ? (
+            <>
+              <h2>Where it went</h2>
+              <Suspense
+                fallback={
+                  <div className="chart-placeholder" role="status">
+                    Loading chart…
+                  </div>
+                }
+              >
+                <SpendingChart data={chart} />
+              </Suspense>
+              <ul className="legend">
+                {chart.map((c) => (
+                  <li key={c.name}>
+                    <span>
+                      <i style={{ background: c.color }} />
+                      {c.name}
+                    </span>
+                    <strong>{money(c.value)}</strong>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <Empty title="Your spending picture">
+              Add an expense to see your category breakdown.
+            </Empty>
+          )}
         </section>
-      )}
-      <div className="section-heading">
-        <h2>Recent transactions</h2>
-        <Link to="/transactions">
-          See all <ChevronRight size={14} />
-        </Link>
+        <section className="panel recent-panel">
+          <div className="section-heading">
+            <h2>Recent transactions</h2>
+            <Link to="/transactions">
+              See all <ChevronRight size={14} />
+            </Link>
+          </div>
+          <TransactionList items={tx.slice(0, 5)} data={data} />
+        </section>
       </div>
-      <TransactionList items={tx.slice(0, 5)} data={data} />
       <Link to="/add" className="fab" aria-label="Add transaction">
         <Plus />
       </Link>
@@ -309,36 +335,38 @@ function Transactions({
           </Link>
         }
       />
-      <label className="search">
-        <span className="sr-only">Search transactions</span>
-        <input
-          type="search"
-          placeholder="Search transactions"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </label>
-      <div className="filters">
-        <MonthPicker month={month} setMonth={setMonth} />
-        <label>
-          <span className="sr-only">Transaction type</span>
-          <select value={kind} onChange={(e) => setKind(e.target.value)}>
-            <option value="all">All types</option>
-            <option value="expense">Expenses</option>
-            <option value="income">Income</option>
-          </select>
+      <div className="history-toolbar">
+        <label className="search">
+          <span className="sr-only">Search transactions</span>
+          <input
+            type="search"
+            placeholder="Search transactions"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </label>
-        <label>
-          <span className="sr-only">Wallet</span>
-          <select value={wallet} onChange={(e) => setWallet(e.target.value)}>
-            <option value="all">All wallets</option>
-            {ledger.data.wallets.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="filters">
+          <MonthPicker month={month} setMonth={setMonth} />
+          <label>
+            <span className="sr-only">Transaction type</span>
+            <select value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="all">All types</option>
+              <option value="expense">Expenses</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">Wallet</span>
+            <select value={wallet} onChange={(e) => setWallet(e.target.value)}>
+              <option value="all">All wallets</option>
+              {ledger.data.wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
       <p className="muted small">
         {items.length} transaction{items.length === 1 ? "" : "s"} ·{" "}
@@ -394,7 +422,7 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
     }
   }
   return (
-    <>
+    <section className="transaction-page">
       <PageTitle
         title="Add transaction"
         action={
@@ -403,7 +431,7 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
           </Link>
         }
       />
-      <form onSubmit={submit} className="form-stack">
+      <form onSubmit={submit} className="panel form-stack transaction-form">
         <div className="segmented" aria-label="Transaction type">
           {(["expense", "income"] as Kind[]).map((k) => (
             <button
@@ -435,58 +463,60 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
             />
           </div>
         </label>
-        <label>
-          Category
-          <select
-            required
-            value={selectedCategory}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            {!categories.length && (
-              <option value="">No active categories</option>
-            )}
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Paid {kind === "expense" ? "from" : "into"}
-          <select
-            required
-            value={selectedWallet}
-            onChange={(e) => setWallet(e.target.value)}
-          >
-            {!ledger.data.wallets.length && (
-              <option value="">No wallets</option>
-            )}
-            {ledger.data.wallets.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Date
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </label>
-        <label>
-          Note <span className="muted">(optional)</span>
-          <input
-            maxLength={200}
-            placeholder="What was it for?"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
+        <div className="form-fields">
+          <label>
+            Category
+            <select
+              required
+              value={selectedCategory}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              {!categories.length && (
+                <option value="">No active categories</option>
+              )}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Paid {kind === "expense" ? "from" : "into"}
+            <select
+              required
+              value={selectedWallet}
+              onChange={(e) => setWallet(e.target.value)}
+            >
+              {!ledger.data.wallets.length && (
+                <option value="">No wallets</option>
+              )}
+              {ledger.data.wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Date
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label>
+            Note <span className="muted">(optional)</span>
+            <input
+              maxLength={200}
+              placeholder="What was it for?"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+        </div>
         {error && (
           <p role="alert" className="error">
             {error}
@@ -499,7 +529,7 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
           Saved on this device first. Synced when you’re online.
         </p>
       </form>
-    </>
+    </section>
   );
 }
 function Budgets({
@@ -568,85 +598,89 @@ function Budgets({
           {money(used)} spent of {money(planned)} planned
         </p>
       </section>
-      <div className="budget-list">
-        {budgets.map((b) => {
-          const used = spent(b),
-            c = ledger.data.categories.find((c) => c.id === b.category_id);
-          return (
-            <section className="panel" key={b.id}>
-              <div className="section-heading">
-                <h3>
-                  {c?.name}
-                  {c?.archived ? " · Archived" : ""}
-                </h3>
-                <span className={used > Number(b.amount) ? "danger" : ""}>
-                  {Math.round((used / Number(b.amount)) * 100)}%
-                </span>
-              </div>
-              <progress
-                max={Number(b.amount)}
-                value={Math.min(used, Number(b.amount))}
-                aria-label={`${c?.name} budget spent`}
-              />
-              <div className="section-heading small muted">
-                <span>
-                  {money(used)} / {money(b.amount)}
-                </span>
-                <span>
-                  {used > Number(b.amount) ? "Over by " : "Left "}
-                  {money(Math.abs(Number(b.amount) - used))}
-                </span>
-              </div>
-            </section>
-          );
-        })}
-      </div>
-      {!budgets.length && (
-        <Empty title="A plan, not a restriction">
-          Set a monthly limit for a category to see your progress.
-        </Empty>
-      )}
-      <form className="panel form-stack" onSubmit={submit}>
-        <h2>Set a category budget</h2>
-        <label>
-          Category
-          <select
-            value={selected}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          >
-            {!categories.length && (
-              <option value="">No active expense categories</option>
-            )}
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Monthly limit (₱)
-          <input
-            inputMode="decimal"
-            required
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="5,000.00"
-          />
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
+      <div className="management-layout">
+        <div>
+          <div className="budget-list">
+            {budgets.map((b) => {
+              const used = spent(b),
+                c = ledger.data.categories.find((c) => c.id === b.category_id);
+              return (
+                <section className="panel" key={b.id}>
+                  <div className="section-heading">
+                    <h3>
+                      {c?.name}
+                      {c?.archived ? " · Archived" : ""}
+                    </h3>
+                    <span className={used > Number(b.amount) ? "danger" : ""}>
+                      {Math.round((used / Number(b.amount)) * 100)}%
+                    </span>
+                  </div>
+                  <progress
+                    max={Number(b.amount)}
+                    value={Math.min(used, Number(b.amount))}
+                    aria-label={`${c?.name} budget spent`}
+                  />
+                  <div className="section-heading small muted">
+                    <span>
+                      {money(used)} / {money(b.amount)}
+                    </span>
+                    <span>
+                      {used > Number(b.amount) ? "Over by " : "Left "}
+                      {money(Math.abs(Number(b.amount) - used))}
+                    </span>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+          {!budgets.length && (
+            <Empty title="A plan, not a restriction">
+              Set a monthly limit for a category to see your progress.
+            </Empty>
+          )}
+        </div>
+        <form className="panel form-stack editor-panel" onSubmit={submit}>
+          <h2>Set a category budget</h2>
+          <label>
+            Category
+            <select
+              value={selected}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              {!categories.length && (
+                <option value="">No active expense categories</option>
+              )}
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Monthly limit (₱)
+            <input
+              inputMode="decimal"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="5,000.00"
+            />
+          </label>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" disabled={saving || ledger.loading}>
+            {saving ? "Saving…" : "Save budget"}
+          </button>
+          <p className="small muted">
+            Saving an existing category replaces its limit for this month.
           </p>
-        )}
-        <button className="primary" disabled={saving || ledger.loading}>
-          {saving ? "Saving…" : "Save budget"}
-        </button>
-        <p className="small muted">
-          Saving an existing category replaces its limit for this month.
-        </p>
-      </form>
+        </form>
+      </div>
     </>
   );
 }
@@ -703,88 +737,90 @@ function Categories({ ledger, user }: { ledger: Ledger; user: string }) {
         Make them yours. Archiving hides a category from new entries, without
         changing your history.
       </p>
-      <ul className="category-list">
-        {ledger.data.categories.map((c) => (
-          <li key={c.id} className={c.archived ? "archived" : ""}>
-            <i style={{ background: c.color }} />
-            <div>
-              <strong>{c.name}</strong>
-              <span>
-                {c.kind}
-                {c.archived ? " · Archived" : ""}
-              </span>
-            </div>
-            <button
-              className="text-button"
-              onClick={() => {
-                setEditing(c);
-                setName(c.name);
-                setKind(c.kind);
-                setColor(c.color);
-              }}
+      <div className="management-layout">
+        <ul className="category-list">
+          {ledger.data.categories.map((c) => (
+            <li key={c.id} className={c.archived ? "archived" : ""}>
+              <i style={{ background: c.color }} />
+              <div>
+                <strong>{c.name}</strong>
+                <span>
+                  {c.kind}
+                  {c.archived ? " · Archived" : ""}
+                </span>
+              </div>
+              <button
+                className="text-button"
+                onClick={() => {
+                  setEditing(c);
+                  setName(c.name);
+                  setKind(c.kind);
+                  setColor(c.color);
+                }}
+              >
+                Edit
+              </button>
+              <button className="text-button" onClick={() => void archive(c)}>
+                {c.archived ? "Restore" : "Archive"}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form className="panel form-stack editor-panel" onSubmit={submit}>
+          <div className="section-heading">
+            <h2>{editing ? "Edit category" : "New category"}</h2>
+            {editing && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setEditing(null);
+                  setName("");
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+          <label>
+            Name
+            <input
+              required
+              maxLength={60}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Food & groceries"
+            />
+          </label>
+          <label>
+            Type
+            <select
+              value={kind}
+              disabled={!!editing}
+              onChange={(e) => setKind(e.target.value as Kind)}
             >
-              Edit
-            </button>
-            <button className="text-button" onClick={() => void archive(c)}>
-              {c.archived ? "Restore" : "Archive"}
-            </button>
-          </li>
-        ))}
-      </ul>
-      <form className="panel form-stack" onSubmit={submit}>
-        <div className="section-heading">
-          <h2>{editing ? "Edit category" : "New category"}</h2>
-          {editing && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setEditing(null);
-                setName("");
-              }}
-            >
-              Cancel
-            </button>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+          <label>
+            Color
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+            />
+          </label>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
           )}
-        </div>
-        <label>
-          Name
-          <input
-            required
-            maxLength={60}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Food & groceries"
-          />
-        </label>
-        <label>
-          Type
-          <select
-            value={kind}
-            disabled={!!editing}
-            onChange={(e) => setKind(e.target.value as Kind)}
-          >
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
-        </label>
-        <label>
-          Color
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          />
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="primary" disabled={saving || ledger.loading}>
-          {saving ? "Saving…" : "Save category"}
-        </button>
-      </form>
+          <button className="primary" disabled={saving || ledger.loading}>
+            {saving ? "Saving…" : "Save category"}
+          </button>
+        </form>
+      </div>
     </>
   );
 }
@@ -863,131 +899,138 @@ function Settings({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `saldo-${today()}.csv`;
+    a.download = `budget-tracker-${today()}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
     <>
       <PageTitle title="Settings" />
-      <section className="panel profile">
-        <span className="avatar">
-          {(
-            session.user.user_metadata.full_name ||
-            session.user.email ||
-            "You"
-          ).slice(0, 1)}
-        </span>
-        <div>
-          <strong>
-            {session.user.user_metadata.full_name || "Your account"}
-          </strong>
-          <p className="muted small">Connected with Google</p>
-        </div>
-      </section>
-      <p className="eyebrow section-label">ORGANIZE</p>
-      <Link className="settings-row" to="/categories">
-        <Tags size={19} />
-        <span>
-          <strong>Categories</strong>
-          <small>Your personal categories</small>
-        </span>
-        <ChevronRight size={18} />
-      </Link>
-      <section className="panel">
-        <h2>Your wallets</h2>
-        <ul className="wallet-list">
-          {ledger.data.wallets.map((w) => (
-            <li key={w.id}>
-              <WalletIcon size={17} />
-              <span>{w.name}</span>
+      <div className="settings-grid">
+        <div className="settings-account">
+          <section className="panel profile">
+            <span className="avatar">
+              {(
+                session.user.user_metadata.full_name ||
+                session.user.email ||
+                "You"
+              ).slice(0, 1)}
+            </span>
+            <div>
               <strong>
-                {money(
-                  Number(w.opening_balance) +
-                    ledger.data.transactions
-                      .filter((t) => t.wallet_id === w.id)
-                      .reduce(
-                        (s, t) =>
-                          s + (t.kind === "income" ? 1 : -1) * Number(t.amount),
-                        0,
-                      ),
-                )}
+                {session.user.user_metadata.full_name || "Your account"}
               </strong>
-            </li>
-          ))}
-        </ul>
-        <form className="form-stack" onSubmit={wallet}>
-          <h3>Add a wallet</h3>
-          <label>
-            Name
-            <input
-              value={name}
-              required
-              maxLength={60}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Savings"
-            />
-          </label>
-          <label>
-            Opening balance (₱)
-            <input
-              inputMode="decimal"
-              required
-              value={opening}
-              onChange={(e) => setOpening(e.target.value)}
-            />
-          </label>
-          {error && (
-            <p className="error" role="alert">
-              {error}
+              <p className="muted small">Connected with Google</p>
+            </div>
+          </section>
+          <p className="eyebrow section-label">ORGANIZE</p>
+          <Link className="settings-row" to="/categories">
+            <Tags size={19} />
+            <span>
+              <strong>Categories</strong>
+              <small>Your personal categories</small>
+            </span>
+            <ChevronRight size={18} />
+          </Link>
+        </div>
+        <section className="panel settings-wallets">
+          <h2>Your wallets</h2>
+          <ul className="wallet-list">
+            {ledger.data.wallets.map((w) => (
+              <li key={w.id}>
+                <WalletIcon size={17} />
+                <span>{w.name}</span>
+                <strong>
+                  {money(
+                    Number(w.opening_balance) +
+                      ledger.data.transactions
+                        .filter((t) => t.wallet_id === w.id)
+                        .reduce(
+                          (s, t) =>
+                            s +
+                            (t.kind === "income" ? 1 : -1) * Number(t.amount),
+                          0,
+                        ),
+                  )}
+                </strong>
+              </li>
+            ))}
+          </ul>
+          <form className="form-stack" onSubmit={wallet}>
+            <h3>Add a wallet</h3>
+            <label>
+              Name
+              <input
+                value={name}
+                required
+                maxLength={60}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Savings"
+              />
+            </label>
+            <label>
+              Opening balance (₱)
+              <input
+                inputMode="decimal"
+                required
+                value={opening}
+                onChange={(e) => setOpening(e.target.value)}
+              />
+            </label>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="secondary" disabled={saving || ledger.loading}>
+              {saving ? "Saving…" : "Add wallet"}
+            </button>
+          </form>
+        </section>
+        <div className="settings-preferences">
+          <p className="eyebrow section-label">PREFERENCES</p>
+          <div className="settings-row">
+            <span>Currency</span>
+            <strong>PHP · Philippine peso</strong>
+          </div>
+          <div className="settings-row">
+            <span>Dates</span>
+            <strong>Local calendar dates</strong>
+          </div>
+          <p className="eyebrow section-label">YOUR DATA</p>
+          <button className="settings-row full" onClick={exportCSV}>
+            <Download size={18} />
+            <span>
+              <strong>Export CSV</strong>
+              <small>Take your records with you</small>
+            </span>
+            <ChevronRight size={18} />
+          </button>
+          <button
+            className="settings-row full"
+            onClick={() => void ledger.refresh()}
+          >
+            <RefreshCw size={18} />
+            <span>Sync now</span>
+            <small>{ledger.queued} pending</small>
+          </button>
+          <button
+            className="settings-row full"
+            disabled={ledger.queued > 0}
+            onClick={() => void onSignOut()}
+          >
+            <LogOut size={18} />
+            <span>Sign out</span>
+          </button>
+          {ledger.queued > 0 && (
+            <p className="small muted">
+              Sync pending changes before signing out so nothing is lost.
             </p>
           )}
-          <button className="secondary" disabled={saving || ledger.loading}>
-            {saving ? "Saving…" : "Add wallet"}
-          </button>
-        </form>
-      </section>
-      <p className="eyebrow section-label">PREFERENCES</p>
-      <div className="settings-row">
-        <span>Currency</span>
-        <strong>PHP · Philippine peso</strong>
+        </div>
       </div>
-      <div className="settings-row">
-        <span>Dates</span>
-        <strong>Local calendar dates</strong>
-      </div>
-      <p className="eyebrow section-label">YOUR DATA</p>
-      <button className="settings-row full" onClick={exportCSV}>
-        <Download size={18} />
-        <span>
-          <strong>Export CSV</strong>
-          <small>Take your records with you</small>
-        </span>
-        <ChevronRight size={18} />
-      </button>
-      <button
-        className="settings-row full"
-        onClick={() => void ledger.refresh()}
-      >
-        <RefreshCw size={18} />
-        <span>Sync now</span>
-        <small>{ledger.queued} pending</small>
-      </button>
-      <button
-        className="settings-row full"
-        disabled={ledger.queued > 0}
-        onClick={() => void onSignOut()}
-      >
-        <LogOut size={18} />
-        <span>Sign out</span>
-      </button>
-      {ledger.queued > 0 && (
-        <p className="small muted">
-          Sync pending changes before signing out so nothing is lost.
-        </p>
-      )}
       <p className="small muted center">
-        Saldo · a quieter way to track your pesos.
+        Budget Tracker · a quieter way to track your pesos.
       </p>
     </>
   );
@@ -1074,9 +1117,7 @@ export default function App() {
   if (!session)
     return (
       <div className="login-shell">
-        <div className="brand">
-          SALDO<span>BUDGET TRACKER</span>
-        </div>
+        <div className="brand">BUDGET TRACKER</div>
         <main>
           <p className="eyebrow">LESS GUESSING. MORE LIVING.</p>
           <h1>
@@ -1143,7 +1184,7 @@ export default function App() {
       </a>
       <div className="topbar">
         <Link to="/" className="brand">
-          SALDO
+          BUDGET TRACKER
         </Link>
         <span className="sync-status" role="status">
           {!ledger.online
@@ -1242,6 +1283,13 @@ export default function App() {
         )}
       </main>
       <nav className="bottom-nav" aria-label="Main navigation">
+        <Link
+          to="/"
+          className="sidebar-brand brand"
+          aria-label="Budget Tracker overview"
+        >
+          BUDGET TRACKER
+        </Link>
         <NavLink to="/" end>
           <Home size={20} />
           <span>Home</span>
@@ -1257,6 +1305,10 @@ export default function App() {
         <NavLink to="/budgets">
           <ChartNoAxesCombined size={20} />
           <span>Budgets</span>
+        </NavLink>
+        <NavLink to="/categories" className="desktop-category">
+          <Tags size={20} />
+          <span>Categories</span>
         </NavLink>
         <NavLink to="/settings">
           <SettingsIcon size={20} />
