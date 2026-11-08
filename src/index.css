@@ -163,16 +163,34 @@ input[type="color"] {
   flex: 1;
 }
 .month-picker {
-  display: inline-block;
-  font-size: 11px;
-  max-width: 155px;
+  display: block;
+  flex: 0 1 180px;
+  width: 180px;
+  min-width: 0;
+  max-width: 100%;
 }
 .month-picker input {
-  padding: 7px 8px;
-  min-height: 34px;
+  /* Safari's native date editor must not impose its intrinsic width. */
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  padding: 10px 8px;
+  min-height: 44px;
   background: #e9eee2;
   border-color: var(--line);
-  font-size: 11px;
+  font-size: 16px;
+}
+.month-picker input::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+.month-picker input::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
 }
 .spending-card {
   background: var(--green);
@@ -533,16 +551,28 @@ input[type="color"] {
   background: #edf0e7;
 }
 .filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
   margin-bottom: 18px;
 }
+.filters > label {
+  min-width: 0;
+  max-width: 100%;
+}
+.filters .month-picker {
+  grid-column: 1 / -1;
+  width: 100%;
+}
 .filters select {
-  min-height: 34px;
-  padding: 7px;
-  font-size: 11px;
-  max-width: 140px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 10px 7px;
+  font-size: 16px;
 }
 .error {
   font-size: 12px;
@@ -1033,6 +1063,12 @@ select {
 
 /* Tablet: expanded workspace, paired panels, touch-friendly bottom navigation. */
 @media (min-width: 640px) {
+  .filters {
+    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+  }
+  .filters .month-picker {
+    grid-column: auto;
+  }
   .app-shell main {
     max-width: 1280px;
     margin: auto;
@@ -1239,12 +1275,9 @@ select {
   }
   .history-toolbar {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) auto;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 1.5fr);
     align-items: start;
     gap: 16px;
-  }
-  .history-toolbar .filters {
-    flex-wrap: nowrap;
   }
   .history-toolbar .filters input,
   .history-toolbar .filters select {
