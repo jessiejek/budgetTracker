@@ -30,6 +30,18 @@ const monthName = (month: string) =>
     month: "long",
     year: "numeric",
   });
+// Balances are signed totals, not transaction kinds; zero stays neutral.
+function BalanceAmount({ amount }: { amount: number }) {
+  return (
+    <strong
+      className={
+        amount > 0 ? "amount-income" : amount < 0 ? "amount-expense" : undefined
+      }
+    >
+      {money(amount)}
+    </strong>
+  );
+}
 function Empty({
   title,
   children,
@@ -199,7 +211,7 @@ function Overview({
               />
             </svg>
             <div>
-              <strong>{money(spent)}</strong>
+              <strong className="amount-expense">{money(spent)}</strong>
               <span>
                 {budget
                   ? `of ${money(budget)} budget`
@@ -215,19 +227,29 @@ function Overview({
                   : "Room for this month"
                 : "Income this month"}
             </span>
-            <strong>{money(budget ? Math.abs(budget - spent) : income)}</strong>
+            <strong
+              className={
+                !budget
+                  ? "amount-income"
+                  : spent > budget
+                    ? "amount-expense"
+                    : undefined
+              }
+            >
+              {money(budget ? Math.abs(budget - spent) : income)}
+            </strong>
           </div>
         </section>
         <section className="panel summary-card">
           <ArrowDownLeft aria-hidden="true" />
           <span>Income this month</span>
-          <strong>{money(income)}</strong>
+          <strong className="amount-income">{money(income)}</strong>
           <p>Money coming in</p>
         </section>
         <section className="panel summary-card">
           <WalletIcon aria-hidden="true" />
           <span>Net this month</span>
-          <strong>{money(income - spent)}</strong>
+          <BalanceAmount amount={income - spent} />
           <p>Income minus expenses</p>
         </section>
       </div>
@@ -241,18 +263,18 @@ function Overview({
         {data.wallets.map((w) => (
           <div className="wallet-chip" key={w.id}>
             <span>{w.name}</span>
-            <strong>
-              {money(
+            <BalanceAmount
+              amount={
                 Number(w.opening_balance) +
-                  data.transactions
-                    .filter((t) => t.wallet_id === w.id)
-                    .reduce(
-                      (s, t) =>
-                        s + (t.kind === "income" ? 1 : -1) * Number(t.amount),
-                      0,
-                    ),
-              )}
-            </strong>
+                data.transactions
+                  .filter((t) => t.wallet_id === w.id)
+                  .reduce(
+                    (s, t) =>
+                      s + (t.kind === "income" ? 1 : -1) * Number(t.amount),
+                    0,
+                  )
+              }
+            />
           </div>
         ))}
       </div>
@@ -277,7 +299,7 @@ function Overview({
                       <i style={{ background: c.color }} />
                       {c.name}
                     </span>
-                    <strong>{money(c.value)}</strong>
+                    <strong className="amount-expense">{money(c.value)}</strong>
                   </li>
                 ))}
               </ul>
@@ -448,13 +470,21 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
             </button>
           ))}
         </div>
-        <label className="amount-input">
+        <label
+          className={
+            "amount-input " +
+            (kind === "expense" ? "amount-expense" : "amount-income")
+          }
+        >
           <span className="eyebrow">AMOUNT IN PESOS</span>
           <div>
             <span>₱</span>
             <input
               autoFocus
               aria-label="Amount in pesos"
+              className={
+                kind === "expense" ? "amount-expense" : "amount-income"
+              }
               inputMode="decimal"
               placeholder="0.00"
               required
@@ -593,9 +623,12 @@ function Budgets({
       </div>
       <section className="panel budget-summary">
         <span>{used > planned ? "Over budget" : "Remaining"}</span>
-        <strong>{money(Math.abs(planned - used))}</strong>
+        <strong className={used > planned ? "amount-expense" : undefined}>
+          {money(Math.abs(planned - used))}
+        </strong>
         <p>
-          {money(used)} spent of {money(planned)} planned
+          <span className="amount-expense">{money(used)}</span> spent of{" "}
+          {money(planned)} planned
         </p>
       </section>
       <div className="management-layout">
@@ -622,9 +655,14 @@ function Budgets({
                   />
                   <div className="section-heading small muted">
                     <span>
-                      {money(used)} / {money(b.amount)}
+                      <span className="amount-expense">{money(used)}</span> /{" "}
+                      {money(b.amount)}
                     </span>
-                    <span>
+                    <span
+                      className={
+                        used > Number(b.amount) ? "amount-expense" : undefined
+                      }
+                    >
                       {used > Number(b.amount) ? "Over by " : "Left "}
                       {money(Math.abs(Number(b.amount) - used))}
                     </span>
@@ -940,19 +978,18 @@ function Settings({
               <li key={w.id}>
                 <WalletIcon size={17} />
                 <span>{w.name}</span>
-                <strong>
-                  {money(
+                <BalanceAmount
+                  amount={
                     Number(w.opening_balance) +
-                      ledger.data.transactions
-                        .filter((t) => t.wallet_id === w.id)
-                        .reduce(
-                          (s, t) =>
-                            s +
-                            (t.kind === "income" ? 1 : -1) * Number(t.amount),
-                          0,
-                        ),
-                  )}
-                </strong>
+                    ledger.data.transactions
+                      .filter((t) => t.wallet_id === w.id)
+                      .reduce(
+                        (s, t) =>
+                          s + (t.kind === "income" ? 1 : -1) * Number(t.amount),
+                        0,
+                      )
+                  }
+                />
               </li>
             ))}
           </ul>

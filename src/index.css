@@ -13,6 +13,8 @@
   --lime: #d0e48f;
   --nav-accent: #235d45;
   --nav-active: #eaf2df;
+  --income-amount: #256b45;
+  --expense-amount: #b23b35;
 }
 * {
   box-sizing: border-box;
@@ -300,8 +302,20 @@ input[type="color"] {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.amount.income {
-  color: #397341;
+/* Explicit transaction kinds preserve meaning without coloring neutral figures. */
+.amount.income,
+.amount-income {
+  color: var(--income-amount);
+}
+.amount.expense,
+.amount-expense {
+  color: var(--expense-amount);
+}
+/* Pastel variants retain readable contrast on the dark dashboard surfaces. */
+.spending-card,
+.wallet-chip:first-child {
+  --income-amount: #a9dfb5;
+  --expense-amount: #ffb4aa;
 }
 .panel {
   background: #fff;

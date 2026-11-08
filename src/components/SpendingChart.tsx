@@ -25,7 +25,10 @@ export default function SpendingChart({
               <Cell key={c.name} fill={c.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(v) => money(Number(v))} />
+          <Tooltip
+            formatter={(v) => money(Number(v))}
+            itemStyle={{ color: "var(--expense-amount)" }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>
