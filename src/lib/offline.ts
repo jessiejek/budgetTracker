@@ -1,5 +1,5 @@
 import { openDB } from "idb";
-import type { Data, Mutation, Row } from "./types";
+import type { Data, Mutation, Row, Table } from "./types";
 const db = () =>
   openDB("saldo-offline-v1", 1, {
     upgrade(db) {
@@ -19,6 +19,10 @@ function normalize(data: Data) {
 function apply(data: Data, mutation: Mutation) {
   const rows = data[mutation.table] as Row[];
   const i = rows.findIndex((row) => row.id === mutation.row.id);
+  if (mutation.op === "delete") {
+    if (i >= 0) rows.splice(i, 1);
+    return;
+  }
   if (i < 0) rows.push(mutation.row);
   else rows[i] = mutation.row;
 }
@@ -57,6 +61,65 @@ export async function persist(user: string, mutation: Mutation): Promise<Data> {
   apply(data, mutation);
   normalize(data);
   await tx.objectStore("snapshots").put(data, user);
+  await tx.done;
+  return data;
+}
+/** Remove a row locally. Cancels pending upserts for the same id. Queues a remote
+ *  delete only when the row may already exist on the server. */
+export async function remove(
+  user: string,
+  table: Table,
+  row: Row,
+): Promise<Data> {
+  const tx = (await db()).transaction(["snapshots", "outbox"], "readwrite");
+  const outbox = tx.objectStore("outbox");
+  const snapshots = tx.objectStore("snapshots");
+  const data: Data = (await snapshots.get(user)) ?? {
+    categories: [],
+    wallets: [],
+    transactions: [],
+    budgets: [],
+  };
+  const queue = await outbox.getAll();
+  const related = queue.filter(
+    (item) =>
+      item.owner === user && item.table === table && item.row.id === row.id,
+  );
+  for (const item of related) await outbox.delete(item.id);
+
+  const pendingCreates = related.filter(
+    (item) => (item.op ?? "upsert") === "upsert" && item.clientCreate,
+  );
+  const pendingOtherUpserts = related.filter(
+    (item) => (item.op ?? "upsert") === "upsert" && !item.clientCreate,
+  );
+  // Never-synced local create: drop outbox + snapshot row, no remote delete.
+  const localOnly =
+    pendingCreates.length > 0 &&
+    pendingOtherUpserts.length === 0 &&
+    !related.some((item) => item.op === "delete");
+
+  const deletion: Mutation = {
+    id: crypto.randomUUID(),
+    table,
+    row,
+    op: "delete",
+  };
+  apply(data, deletion);
+  normalize(data);
+
+  if (!localOnly) {
+    const order = queue
+      .filter((item) => !related.some((r) => r.id === item.id))
+      .reduce((last, x) => Math.max(last, x.enqueued_at + 1), Date.now());
+    await outbox.put({
+      ...deletion,
+      owner: user,
+      enqueued_at: order,
+    });
+  }
+
+  await snapshots.put(data, user);
   await tx.done;
   return data;
 }

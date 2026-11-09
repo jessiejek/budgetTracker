@@ -1,5 +1,12 @@
 import { useEffect, useState, lazy, Suspense, type FormEvent } from "react";
-import { Link, NavLink, Route, Routes, useNavigate } from "react-router";
+import {
+  Link,
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router";
 import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDownLeft,
@@ -16,6 +23,7 @@ import {
   X,
   Download,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 const SpendingChart = lazy(() => import("./components/SpendingChart"));
 import { isConfigured, supabase } from "./lib/supabase";
@@ -113,32 +121,42 @@ function TransactionList({
     <ul className="transaction-list">
       {items.map((t) => (
         <li key={t.id}>
-          <span className={"transaction-icon " + t.kind}>
-            {t.kind === "income" ? (
-              <ArrowDownLeft size={19} />
-            ) : (
-              <ArrowUpRight size={19} />
-            )}
-          </span>
-          <div className="transaction-copy">
-            <strong>
-              {t.note ||
-                data.categories.find((c) => c.id === t.category_id)?.name ||
-                "Transaction"}
-            </strong>
-            <span>
-              {data.categories.find((c) => c.id === t.category_id)?.name} ·{" "}
-              {data.wallets.find((w) => w.id === t.wallet_id)?.name} ·{" "}
-              {new Date(t.occurred_on + "T12:00:00").toLocaleDateString(
-                "en-PH",
-                { month: "short", day: "numeric" },
+          <Link
+            to={`/transactions/${t.id}`}
+            className="transaction-row"
+            aria-label={`Open ${
+              t.note ||
+              data.categories.find((c) => c.id === t.category_id)?.name ||
+              "transaction"
+            }`}
+          >
+            <span className={"transaction-icon " + t.kind} aria-hidden="true">
+              {t.kind === "income" ? (
+                <ArrowDownLeft size={19} />
+              ) : (
+                <ArrowUpRight size={19} />
               )}
             </span>
-          </div>
-          <strong className={"amount " + t.kind}>
-            {t.kind === "income" ? "+" : "−"}
-            {money(t.amount)}
-          </strong>
+            <div className="transaction-copy">
+              <strong>
+                {t.note ||
+                  data.categories.find((c) => c.id === t.category_id)?.name ||
+                  "Transaction"}
+              </strong>
+              <span>
+                {data.categories.find((c) => c.id === t.category_id)?.name} ·{" "}
+                {data.wallets.find((w) => w.id === t.wallet_id)?.name} ·{" "}
+                {new Date(t.occurred_on + "T12:00:00").toLocaleDateString(
+                  "en-PH",
+                  { month: "short", day: "numeric" },
+                )}
+              </span>
+            </div>
+            <strong className={"amount " + t.kind}>
+              {t.kind === "income" ? "+" : "−"}
+              {money(t.amount)}
+            </strong>
+          </Link>
         </li>
       ))}
     </ul>
@@ -398,6 +416,164 @@ function Transactions({
     </>
   );
 }
+function TransactionDetail({ ledger, user }: { ledger: Ledger; user: string }) {
+  const { id } = useParams<{ id: string }>(),
+    navigate = useNavigate(),
+    [confirming, setConfirming] = useState(false),
+    [deleting, setDeleting] = useState(false),
+    [error, setError] = useState("");
+  const tx = ledger.data.transactions.find(
+    (t) => t.id === id && t.user_id === user,
+  );
+  const category = tx
+    ? ledger.data.categories.find((c) => c.id === tx.category_id)
+    : undefined;
+  const wallet = tx
+    ? ledger.data.wallets.find((w) => w.id === tx.wallet_id)
+    : undefined;
+
+  async function confirmDelete() {
+    if (!tx) return;
+    setError("");
+    setDeleting(true);
+    try {
+      await ledger.remove("transactions", tx);
+      navigate("/transactions");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete. Try again.");
+      setDeleting(false);
+      setConfirming(false);
+    }
+  }
+
+  if (!tx) {
+    return (
+      <>
+        <PageTitle title="Entry not found" />
+        <Empty title="This entry is gone">
+          It may already have been deleted, or it belongs to another month.
+        </Empty>
+        <Link to="/transactions" className="primary">
+          Back to History
+        </Link>
+      </>
+    );
+  }
+
+  return (
+    <section className="transaction-page">
+      <PageTitle
+        title="Entry"
+        action={
+          <Link
+            to="/transactions"
+            className="icon-button"
+            aria-label="Back to History"
+          >
+            <X />
+          </Link>
+        }
+      />
+      <div className="panel form-stack transaction-form entry-detail">
+        <div className={"entry-hero " + tx.kind}>
+          <span className={"transaction-icon " + tx.kind} aria-hidden="true">
+            {tx.kind === "income" ? (
+              <ArrowDownLeft size={22} />
+            ) : (
+              <ArrowUpRight size={22} />
+            )}
+          </span>
+          <div>
+            <p className="eyebrow">
+              {tx.kind === "income" ? "INCOME" : "EXPENSE"}
+            </p>
+            <strong className={"amount " + tx.kind}>
+              {tx.kind === "income" ? "+" : "−"}
+              {money(tx.amount)}
+            </strong>
+          </div>
+        </div>
+        <dl className="entry-fields">
+          <div>
+            <dt>Note</dt>
+            <dd>{tx.note || "No note"}</dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{category?.name || "Unknown"}</dd>
+          </div>
+          <div>
+            <dt>Wallet</dt>
+            <dd>{wallet?.name || "Unknown"}</dd>
+          </div>
+          <div>
+            <dt>Date</dt>
+            <dd>
+              {new Date(tx.occurred_on + "T12:00:00").toLocaleDateString(
+                "en-PH",
+                { year: "numeric", month: "long", day: "numeric" },
+              )}
+            </dd>
+          </div>
+        </dl>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <button
+          type="button"
+          className="danger-button"
+          disabled={deleting || ledger.loading}
+          onClick={() => setConfirming(true)}
+        >
+          <Trash2 size={18} aria-hidden="true" />
+          Delete entry
+        </button>
+        <p className="muted small center">
+          Deleting updates your wallet totals. Synced when you’re online.
+        </p>
+      </div>
+      {confirming && (
+        <div
+          className="confirm-backdrop"
+          role="presentation"
+          onClick={() => !deleting && setConfirming(false)}
+        >
+          <div
+            className="confirm-dialog panel"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-entry-title"
+            aria-describedby="delete-entry-copy"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-entry-title">Delete this entry?</h2>
+            <p id="delete-entry-copy">This can’t be undone.</p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="secondary"
+                disabled={deleting}
+                onClick={() => setConfirming(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="danger-button"
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
   const navigate = useNavigate(),
     [kind, setKind] = useState<Kind>("expense"),
@@ -425,17 +601,21 @@ function AddTransaction({ ledger, user }: { ledger: Ledger; user: string }) {
           "Create a wallet and an active category first in Settings.",
         );
       const value = parseAmount(amount);
-      await ledger.save("transactions", {
-        id: crypto.randomUUID(),
-        user_id: user,
-        wallet_id: selectedWallet,
-        category_id: selectedCategory,
-        kind,
-        amount: value,
-        note: note.trim(),
-        occurred_on: date,
-        created_at: new Date().toISOString(),
-      });
+      await ledger.save(
+        "transactions",
+        {
+          id: crypto.randomUUID(),
+          user_id: user,
+          wallet_id: selectedWallet,
+          category_id: selectedCategory,
+          kind,
+          amount: value,
+          note: note.trim(),
+          occurred_on: date,
+          created_at: new Date().toISOString(),
+        },
+        { clientCreate: true },
+      );
       navigate("/transactions");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save. Try again.");
@@ -1315,6 +1495,12 @@ export default function App() {
                   month={month}
                   setMonth={setMonth}
                 />
+              }
+            />
+            <Route
+              path="/transactions/:id"
+              element={
+                <TransactionDetail ledger={ledger} user={session.user.id} />
               }
             />
             <Route

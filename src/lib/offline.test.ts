@@ -8,6 +8,7 @@ import {
   cache,
   acknowledged,
   clearUser,
+  remove,
 } from "./offline.ts";
 import { emptyData, type Transaction, type Category } from "./types.ts";
 
@@ -88,6 +89,68 @@ test("history sorts newest dates before creation timestamps", async () => {
   assert.deepEqual(
     (await cached(user))?.transactions.map((t) => t.id),
     ["two", "one"],
+  );
+  await clearUser(user);
+});
+
+test("deletes remove local rows and queue remote sync when already synced", async () => {
+  const user = "test-user-delete";
+  const expense: Transaction = {
+    id: "tx-del-1",
+    user_id: user,
+    wallet_id: "cash",
+    category_id: "food",
+    kind: "expense",
+    amount: 80,
+    note: "Snack",
+    occurred_on: "2026-11-08",
+    created_at: "2026-11-08T09:00:00Z",
+  };
+  // Pretend the row already lives on the server: seed snapshot without outbox create.
+  await persist(user, {
+    id: "seed",
+    table: "transactions",
+    row: expense,
+  });
+  await acknowledged("seed");
+  assert.equal((await pending(user)).length, 0);
+  assert.equal((await cached(user))?.transactions.length, 1);
+
+  await remove(user, "transactions", expense);
+  assert.equal((await cached(user))?.transactions.length, 0);
+  const queue = await pending(user);
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0].op, "delete");
+  assert.equal(queue[0].row.id, "tx-del-1");
+  await clearUser(user);
+});
+
+test("deleting a not-yet-synced offline entry only clears local state", async () => {
+  const user = "test-user-delete-local";
+  const expense: Transaction = {
+    id: "tx-local-1",
+    user_id: user,
+    wallet_id: "cash",
+    category_id: "food",
+    kind: "expense",
+    amount: 40,
+    note: "Offline coffee",
+    occurred_on: "2026-11-08",
+    created_at: "2026-11-08T10:00:00Z",
+  };
+  await persist(user, {
+    id: "create-local",
+    table: "transactions",
+    row: expense,
+    clientCreate: true,
+  });
+  assert.equal((await pending(user)).length, 1);
+  await remove(user, "transactions", expense);
+  assert.equal((await cached(user))?.transactions.length, 0);
+  assert.equal(
+    (await pending(user)).length,
+    0,
+    "unsynced create + delete should not leave a remote delete queued",
   );
   await clearUser(user);
 });

@@ -43,6 +43,10 @@ export interface Mutation {
   id: string;
   table: Table;
   row: Row;
+  /** Defaults to upsert when omitted (older outbox items). */
+  op?: "upsert" | "delete";
+  /** True when this upsert created a brand-new local row that may not exist on the server yet. */
+  clientCreate?: boolean;
 }
 export const emptyData = (): Data => ({
   categories: [],

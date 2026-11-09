@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
-import { acknowledged, cache, cached, persist, pending } from "./offline";
+import {
+  acknowledged,
+  cache,
+  cached,
+  persist,
+  pending,
+  remove,
+} from "./offline";
 import { emptyData, type Data, type Row, type Table } from "./types";
 export function useLedger(user: string | undefined) {
   const [data, setData] = useState<Data>(emptyData),
@@ -20,9 +27,18 @@ export function useLedger(user: string | undefined) {
       if (!navigator.onLine) return;
       for (const item of queue) {
         if (current.current !== user) return;
-        const payload: Record<string, unknown> = { ...item.row };
-        const { error } = await supabase.from(item.table).upsert(payload);
-        if (error) throw error;
+        if (item.op === "delete") {
+          const { error } = await supabase
+            .from(item.table)
+            .delete()
+            .eq("id", item.row.id)
+            .eq("user_id", user);
+          if (error) throw error;
+        } else {
+          const payload: Record<string, unknown> = { ...item.row };
+          const { error } = await supabase.from(item.table).upsert(payload);
+          if (error) throw error;
+        }
         await acknowledged(item.id);
       }
       if (current.current !== user) return;
@@ -110,9 +126,18 @@ export function useLedger(user: string | undefined) {
       window.removeEventListener("offline", reconnect);
     };
   }, [user, refresh]);
-  async function save(table: Table, row: Row) {
+  async function save(
+    table: Table,
+    row: Row,
+    options?: { clientCreate?: boolean },
+  ) {
     if (!user || row.user_id !== user) throw new Error("Please sign in again.");
-    const mutation = { id: crypto.randomUUID(), table, row };
+    const mutation = {
+      id: crypto.randomUUID(),
+      table,
+      row,
+      clientCreate: options?.clientCreate,
+    };
     const previous = await persist(user, mutation);
     if (current.current === user) {
       setData(previous);
@@ -120,5 +145,23 @@ export function useLedger(user: string | undefined) {
     }
     void refresh();
   }
-  return { data, loading, error, queued, online, save, refresh };
+  async function removeRow(table: Table, row: Row) {
+    if (!user || row.user_id !== user) throw new Error("Please sign in again.");
+    const previous = await remove(user, table, row);
+    if (current.current === user) {
+      setData(previous);
+      setQueued((await pending(user)).length);
+    }
+    void refresh();
+  }
+  return {
+    data,
+    loading,
+    error,
+    queued,
+    online,
+    save,
+    remove: removeRow,
+    refresh,
+  };
 }

@@ -266,11 +266,24 @@ input[type="color"] {
   font-weight: 550;
 }
 .transaction-list li {
+  border-bottom: 1px solid var(--line);
+}
+.transaction-row {
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--line);
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
+}
+.transaction-row:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.transaction-row:hover .transaction-copy strong {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .transaction-icon {
   width: 31px;
@@ -601,6 +614,94 @@ input[type="color"] {
 }
 .danger {
   color: #a04d2b;
+}
+.danger-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 18px;
+  background: #fff4eb;
+  color: #8a3418;
+  border: 1px solid #e4c3ab;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.danger-button:hover:not(:disabled) {
+  background: #ffe8d9;
+}
+.danger-button:focus-visible {
+  outline: 2px solid #a04d2b;
+  outline-offset: 2px;
+}
+.entry-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+.entry-hero .amount {
+  display: block;
+  font-size: 28px;
+  letter-spacing: -0.5px;
+}
+.entry-fields {
+  display: grid;
+  gap: 14px;
+  margin: 8px 0 4px;
+}
+.entry-fields div {
+  display: grid;
+  gap: 4px;
+}
+.entry-fields dt {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.entry-fields dd {
+  font-size: 14px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(23, 63, 56, 0.45);
+}
+.confirm-dialog {
+  width: min(100%, 420px);
+  padding: 22px 20px 18px;
+  border-radius: 14px;
+}
+.confirm-dialog h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.confirm-dialog p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 18px;
+  line-height: 1.6;
+}
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (min-width: 721px) {
+  .confirm-backdrop {
+    align-items: center;
+  }
 }
 .budget-summary > span {
   font-size: 11px;
@@ -1161,7 +1262,7 @@ select {
   .panel {
     padding: 24px;
   }
-  .transaction-list li {
+  .transaction-row {
     padding: 18px 0;
   }
   .transaction-copy strong {
