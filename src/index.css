@@ -845,8 +845,39 @@ input[type="color"] {
   height: 35%;
   background: #c8df95;
 }
-.login-shell .primary {
+.login-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 24px;
+  width: 100%;
+}
+.login-shell .primary,
+.login-shell .oauth-facebook {
+  margin-top: 0;
+}
+.oauth-facebook {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 18px;
+  background: #1877f2;
+  color: #fff;
+  border: 1px solid #1877f2;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.oauth-facebook:hover:not(:disabled) {
+  background: #166fe5;
+  border-color: #166fe5;
+}
+.oauth-facebook:focus-visible {
+  outline: 2px solid #1877f2;
+  outline-offset: 2px;
 }
 .login-shell .center {
   margin-top: 14px;

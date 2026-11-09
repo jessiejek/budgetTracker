@@ -958,7 +958,16 @@ function Settings({
               <strong>
                 {session.user.user_metadata.full_name || "Your account"}
               </strong>
-              <p className="muted small">Connected with Google</p>
+              <p className="muted small">
+                Connected with{" "}
+                {(
+                  session.user.app_metadata?.provider ||
+                  session.user.identities?.[0]?.provider ||
+                  "your account"
+                )
+                  .toString()
+                  .replace(/^./, (c) => c.toUpperCase())}
+              </p>
             </div>
           </section>
           <p className="eyebrow section-label">ORGANIZE</p>
@@ -1076,6 +1085,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null),
     [authLoading, setAuthLoading] = useState(true),
     [authError, setAuthError] = useState(""),
+    [oauthBusy, setOauthBusy] = useState(false),
     [month, setMonth] = useState(monthKey(today())),
     [update, setUpdate] = useState<null | (() => void)>(null);
   const ledger = useLedger(session?.user.id);
@@ -1117,19 +1127,28 @@ export default function App() {
     window.addEventListener("pwa-update", listener);
     return () => window.removeEventListener("pwa-update", listener);
   }, []);
-  async function login() {
-    if (!supabase) return;
+  async function login(provider: "google" | "facebook") {
+    if (!supabase || oauthBusy) return;
     setAuthError("");
+    setOauthBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
+        provider,
+        options: {
+          redirectTo: window.location.origin,
+          ...(provider === "facebook" ? { scopes: "email" } : {}),
+        },
       });
-      if (error) setAuthError(error.message);
+      if (error) {
+        setAuthError(error.message);
+        setOauthBusy(false);
+      }
+      // On success the browser redirects away; keep busy until then.
     } catch {
       setAuthError(
         "Sign-in could not start. Check your connection and try again.",
       );
+      setOauthBusy(false);
     }
   }
   async function signOut() {
@@ -1165,7 +1184,7 @@ export default function App() {
           <p className="login-copy">
             Log daily spending. See what’s left.
             <br />
-            Start with your Google account.
+            Start with Google or Facebook.
           </p>
           <section className="login-preview" aria-label="Product preview">
             <div className="section-heading">
@@ -1190,18 +1209,41 @@ export default function App() {
               <strong>Ready for setup</strong>
               <p>
                 Add the two Supabase environment variables, run the SQL
-                migration yourself, and enable Google sign-in. See the README
-                for the steps.
+                migration yourself, and enable Google and Facebook sign-in. See
+                the README for the steps.
               </p>
             </div>
           )}
-          <button
-            className="primary"
-            disabled={!isConfigured}
-            onClick={() => void login()}
-          >
-            Continue with Google <ArrowUpRight size={18} />
-          </button>
+          <div className="login-actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={!isConfigured || oauthBusy}
+              aria-busy={oauthBusy}
+              onClick={() => void login("google")}
+            >
+              Continue with Google <ArrowUpRight size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="oauth-facebook"
+              disabled={!isConfigured || oauthBusy}
+              aria-busy={oauthBusy}
+              aria-label="Continue with Facebook"
+              onClick={() => void login("facebook")}
+            >
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M22 12.06C22 6.505 17.523 2 12 2S2 6.505 2 12.06c0 5.022 3.657 9.184 8.438 9.94v-7.03H7.898v-2.91h2.54V9.86c0-2.522 1.492-3.915 3.777-3.915 1.094 0 2.238.197 2.238.197v2.476h-1.26c-1.243 0-1.63.775-1.63 1.57v1.888h2.773l-.443 2.91h-2.33V22c4.78-.756 8.437-4.918 8.437-9.94z" />
+              </svg>
+              Continue with Facebook
+            </button>
+          </div>
           {authError && (
             <p role="alert" className="error">
               {authError}
